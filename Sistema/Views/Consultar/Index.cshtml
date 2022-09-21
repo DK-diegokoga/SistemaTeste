@@ -1,0 +1,163 @@
+﻿@model List<Sistema.Models.ConsultarModel>
+@{
+    ViewBag.Title = "CONSULTA DE NOME FANTASIA";
+}
+
+<div id="reservar">
+    <section id="reserva_cabecalho">
+        <h1>@ViewBag.Title</h1>
+    </section>
+    <section id="reserva_conteudo">
+        <div id="cabecalho_grid" class="row">
+            <div class="col-md-12">
+                <a id="btnMontarLista" class="btn btn-success" role="button"><i class="glyphicon glyphicon-plus"></i>MONTAR LISTA</a>
+                <a id="btnApagarLista" class="btn btn-danger" role="button"><i class="glyphicon glyphicon-trash"></i>Limpar</a>
+            </div>
+        </div>
+        <div class="row" id="tabela" style="display:none">
+            <div class="col-md-12">
+                <table id="grid_consulta" class="table table-bordered table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome Fantasia</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr data-id="@item.Id">
+                                <td>@item.NomeFantasia</td>
+                                <td>
+                                    <a class="btn btn-primary btnDescricao" role="button"><i class="glyphicon glyphicon-pencil"></i>DETALHE</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+@Html.Hidden("idCadastro")
+<div id="modal_descricao" class="form-horizontal" role="dialog">
+    <fieldset>
+        <div class="row">
+            <div class="form-group">
+                @Html.Label("txtCodigo", "Código", new { @class = "col-md-3 control-label" })
+                <div class="col-md-12">
+                    @Html.TextBox("txtCodigo", null, new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="form-group">
+                @Html.Label("txtNomeFantasia", "Nome Fantasia", new { @class = "col-md-3 control-label" })
+                <div class="col-md-12">
+                    @Html.TextBox("txtNomeFantasia", null, new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="form-group">
+                @Html.Label("txtCNPJCPF", "CNPJ/CPF", new { @class = "col-md-3 control-label" })
+                <div class="col-md-12">
+                    @Html.TextBox("txtCNPJCPF", null, new { @class = "form-control" })
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <div class="modal-footer">
+                        <a id="btnSair" class="btn btn-danger" role="button" data-dismiss="modal"><i class="glyphicon glyphicon-remove"></i> Sair</a>
+                        <a id="btnSalvar" class="btn btn-primary" role="button"><i class="glyphicon glyphicon-ok"></i> Gravar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+</div>
+
+@section Scripts{ 
+    <script>
+        var modalConsulta = $('#modal_descricao');
+        modalConsulta.hide();
+
+        $("#btnMontarLista").on("click", function () {
+            $("#tabela").css("display","block");
+        });
+
+        $("#btnApagarLista").on("click", function () {
+            $("#tabela").css("display", "none");
+        });
+
+        $(document)
+            .on('click', '.btnDescricao', function () {
+                var btn = $(this),
+                    id = btn.closest('tr').attr('data-id'),
+                    url = '@Url.Action("RecuperarValores", "Consultar")',
+                    param = { 'id': id };
+
+                $.post(url, param, function (response) {
+                    if (response) {
+                        AbrirModal(response);
+                    }
+                })
+            })
+            .on('click','#btnSalvar', function () {
+                var btn = $(this),
+                    url = '@Url.Action("SalvarValores", "Consultar")',
+                    param = {
+                        Id: $("#txtCodigo").val(),
+                        NomeFantasia: $('#txtNomeFantasia').val(),
+                        CNPJ_CPF: $('#txtCNPJCPF').val(),
+                    };
+
+                $.post(url, param, function (response) {
+                    if (response.Resultado == "OK") {
+                        if (param.Id == 0) {
+                            param.Id = response.IdSalvo;
+                            var table = $('#grid_consulta').find('tbody'),
+                                linha = criarLinhaGrid(param);
+
+                            table.append(linha);
+                        }
+                        else {
+                            var linha = $('#grid_consulta').find('tr[data-id=' + param.Id + ']').find('td');
+                            linha
+                                .eq(0).html(param.NomeFantasia).end()
+                        }
+
+                        modalConsulta.parents('.bootbox').modal('hide');
+                    }
+                })
+            })
+
+        function AbrirModal(dados) {
+            $('#txtCodigo').val(dados.Id);
+            $('#txtNomeFantasia').val(dados.NomeFantasia);
+            $('#txtCNPJCPF').val(dados.CNPJ_CPF);
+            $("#txtCodigo").attr("readonly", true);
+            $("#txtCNPJCPF").attr("readonly", true);
+
+            bootbox.dialog({
+                title: '@ViewBag.Title',
+                message: modalConsulta
+            }).on('shown.bs.modal', function () {
+                modalConsulta.show(0, function () {
+                    $('#txtNomeFantasia').focus();
+                });
+            }).on('hidden.bs.modal', function () {
+                modalConsulta.hide().appendTo('body');
+            });
+        }
+
+        function criarLinhaGrid(dados) {
+            var ret =
+                '<tr data-id=' + dados.Id + '>' +
+                    '<td>' + dados.NomeFantasia + '</td>' +
+                    '<td>' +
+                        '<a class="btn btn-primary btnDescricao" role="button" style="margin-right: 3px"><i class="glyphicon glyphicon-pencil"></i>DETALHE</a>' +
+                    '</td>' +
+                '</tr>';
+            return ret;
+        }
+    </script>
+}
